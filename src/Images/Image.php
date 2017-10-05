@@ -3,6 +3,7 @@
 namespace Goose\Images;
 
 use DOMWrap\Element;
+use Horizon\PlatformBundle\Service\Media\RemoteMedia;
 
 /**
  * Image
@@ -10,13 +11,15 @@ use DOMWrap\Element;
  * @package Goose\Images
  * @license http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0
  */
-class Image {
+class Image
+{
     /**
      * @param mixed[] $options
      */
-    public function __construct($options = []) {
+    public function __construct($options = [])
+    {
         foreach ($options as $key => $value) {
-            $method = 'set' . ucfirst($key);
+            $method = 'set'.ucfirst($key);
 
             if (method_exists($this, $method)) {
                 call_user_func([$this, $method], $value);
@@ -30,14 +33,16 @@ class Image {
     /**
      * @param Element $topImageNode
      */
-    public function setTopImageNode($topImageNode) {
+    public function setTopImageNode($topImageNode)
+    {
         $this->topImageNode = $topImageNode;
     }
 
     /**
      * @return Element
      */
-    public function getTopImageNode() {
+    public function getTopImageNode()
+    {
         return $this->topImageNode;
     }
 
@@ -47,14 +52,16 @@ class Image {
     /**
      * @param string $imageSrc
      */
-    public function setImageSrc($imageSrc) {
+    public function setImageSrc($imageSrc)
+    {
         $this->imageSrc = $imageSrc;
     }
 
     /**
      * @return string
      */
-    public function getImageSrc() {
+    public function getImageSrc()
+    {
         return $this->imageSrc;
     }
 
@@ -64,14 +71,16 @@ class Image {
     /**
      * @param double $imageScore
      */
-    public function setImageScore($imageScore) {
+    public function setImageScore($imageScore)
+    {
         $this->imageScore = $imageScore;
     }
 
     /**
      * @return double
      */
-    public function getImageScore() {
+    public function getImageScore()
+    {
         return $this->imageScore;
     }
 
@@ -81,14 +90,16 @@ class Image {
     /**
      * @param double $confidenceScore
      */
-    public function setConfidenceScore($confidenceScore) {
+    public function setConfidenceScore($confidenceScore)
+    {
         $this->confidenceScore = $confidenceScore;
     }
 
     /**
      * @return double
      */
-    public function getConfidenceScore() {
+    public function getConfidenceScore()
+    {
         return $this->confidenceScore;
     }
 
@@ -98,14 +109,16 @@ class Image {
     /**
      * @param int $height
      */
-    public function setHeight($height) {
+    public function setHeight($height)
+    {
         $this->height = $height;
     }
 
     /**
      * @return int
      */
-    public function getHeight() {
+    public function getHeight()
+    {
         return $this->height;
     }
 
@@ -115,14 +128,16 @@ class Image {
     /**
      * @param int $width
      */
-    public function setWidth($width) {
+    public function setWidth($width)
+    {
         $this->width = $width;
     }
 
     /**
      * @return int
      */
-    public function getWidth() {
+    public function getWidth()
+    {
         return $this->width;
     }
 
@@ -132,14 +147,16 @@ class Image {
     /**
      * @param string $imageExtractionType
      */
-    public function setImageExtractionType($imageExtractionType) {
+    public function setImageExtractionType($imageExtractionType)
+    {
         $this->imageExtractionType = $imageExtractionType;
     }
 
     /**
      * @return string
      */
-    public function getImageExtractionType() {
+    public function getImageExtractionType()
+    {
         return $this->imageExtractionType;
     }
 
@@ -149,14 +166,30 @@ class Image {
     /**
      * @param int $bytes
      */
-    public function setBytes($bytes) {
+    public function setBytes($bytes)
+    {
         $this->bytes = $bytes;
     }
 
     /**
      * @return int
      */
-    public function getBytes() {
+    public function getBytes()
+    {
         return $this->bytes;
+    }
+
+    /**
+     * @return array
+     */
+    public function buildPhotoRecord()
+    {
+        return [
+            'id' => $this->getImageSrc(),
+            'width' => $this->getWidth(),
+            'height' => $this->getHeight(),
+            'url_regular' => $this->getImageSrc(),
+            'type' => RemoteMedia::TYPE_REMOTE_URL,
+        ];
     }
 }

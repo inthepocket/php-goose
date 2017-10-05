@@ -8,26 +8,29 @@ namespace Goose;
  * @package Goose
  * @license http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0
  */
-class Client {
+class Client
+{
     /** @var Configuration */
     protected $config;
 
     /**
      * @param mixed[] $config
      */
-    public function __construct($config = []) {
+    public function __construct($config = [])
+    {
         $this->config = new Configuration($config);
     }
 
     /**
-     * @param string $name
+     * @param string  $name
      * @param mixed[] $arguments
      *
      * @return mixed
      */
-    public function __call($name, $arguments) {
+    public function __call($name, $arguments)
+    {
         if (method_exists($this->config, $name)) {
-            return call_user_func_array(array($this->config, $name), $arguments);
+            return call_user_func_array([$this->config, $name], $arguments);
         }
 
         return null;
@@ -35,9 +38,12 @@ class Client {
 
     /**
      * @param string $url
-     * @param string $rawHTML
+     * @param null   $rawHTML
+     *
+     * @return Article
      */
-    public function extractContent($url, $rawHTML = null) {
+    public function extractContent($url, $rawHTML = null)
+    {
         $crawler = new Crawler($this->config);
         $article = $crawler->crawl($url, $rawHTML);
 
