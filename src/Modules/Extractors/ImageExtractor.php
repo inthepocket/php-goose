@@ -2,6 +2,7 @@
 
 namespace Goose\Modules\Extractors;
 
+use DOMWrap\Document;
 use Goose\Article;
 use Goose\Images\Image;
 use Goose\Images\ImageUtils;
@@ -18,16 +19,33 @@ use DOMWrap\NodeList;
  * @package Goose\Modules\Extractors
  * @license http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0
  */
-class ImageExtractor extends AbstractModule implements ModuleInterface {
+class ImageExtractor extends AbstractModule implements ModuleInterface
+{
     use ArticleMutatorTrait;
 
     /** @var string[] */
     private $badFileNames = [
-        '\.html', '\.gif', '\.ico', 'button', 'twitter\.jpg', 'facebook\.jpg',
-        'ap_buy_photo', 'digg\.jpg', 'digg\.png', 'delicious\.png',
-        'facebook\.png', 'reddit\.jpg', 'doubleclick', 'diggthis',
-        'diggThis', 'adserver', '\/ads\/', 'ec\.atdmt\.com', 'mediaplex\.com',
-        'adsatt', 'view\.atdmt',
+        '\.html',
+        '\.gif',
+        '\.ico',
+        'button',
+        'twitter\.jpg',
+        'facebook\.jpg',
+        'ap_buy_photo',
+        'digg\.jpg',
+        'digg\.png',
+        'delicious\.png',
+        'facebook\.png',
+        'reddit\.jpg',
+        'doubleclick',
+        'diggthis',
+        'diggThis',
+        'adserver',
+        '\/ads\/',
+        'ec\.atdmt\.com',
+        'mediaplex\.com',
+        'adsatt',
+        'view\.atdmt',
     ];
 
     /** @var string[] */
@@ -35,7 +53,7 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
         'yn-story-related-media',
         'cnn_strylccimg300cntr',
         'big_photo',
-        'ap-smallphoto-a'
+        'ap-smallphoto-a',
     ];
 
     /** @var int */
@@ -47,23 +65,24 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
     /**
      * @param Article $article
      */
-    public function run(Article $article) {
+    public function run(Article $article)
+    {
         $this->article($article);
 
         if ($this->config()->get('image_fetch_best')) {
             $article->setTopImage($this->getBestImage());
+        }
 
-            if ($this->config()->get('image_fetch_all')
-              && $article->getTopNode() instanceof Element) {
-                $article->setAllImages($this->getAllImages());
-            }
+        if ($article->getDoc() instanceof Document && $this->config()->get('image_fetch_all')) {
+            $article->setAllImages($this->getAllImages());
         }
     }
 
     /**
      * @return Image|null
      */
-    private function getBestImage() {
+    private function getBestImage()
+    {
         $image = $this->checkForKnownElements();
 
         if ($image) {
@@ -93,7 +112,8 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
      *
      * @return Image|null
      */
-    private function checkForMetaTag() {
+    private function checkForMetaTag()
+    {
         $image = $this->checkForTwitterTag();
 
         if ($image) {
@@ -125,12 +145,13 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
      * 5. Score images based on different factors like height/width and possibly things like color density
      *
      * @param Element $node
-     * @param int $parentDepthLevel
-     * @param int $siblingDepthLevel
+     * @param int     $parentDepthLevel
+     * @param int     $siblingDepthLevel
      *
      * @return Image|null
      */
-    private function checkForLargeImages(Element $node, $parentDepthLevel, $siblingDepthLevel) {
+    private function checkForLargeImages(Element $node, $parentDepthLevel, $siblingDepthLevel)
+    {
         $goodLocalImages = $this->getImageCandidates($node);
 
         $scoredLocalImages = $this->scoreLocalImages($goodLocalImages, $parentDepthLevel);
@@ -163,12 +184,13 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
 
     /**
      * @param Element $node
-     * @param int $parentDepth
-     * @param int $siblingDepth
+     * @param int     $parentDepth
+     * @param int     $siblingDepth
      *
      * @return object|null
      */
-    private function getDepthLevel(Element $node, $parentDepth, $siblingDepth) {
+    private function getDepthLevel(Element $node, $parentDepth, $siblingDepth)
+    {
         if (is_null($node)) {
             return null;
         }
@@ -178,19 +200,21 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
         }
 
         // Find previous sibling element node
-        $siblingNode = $node->preceding(function($node) {
-            return $node instanceof Element;
-        });
+        $siblingNode = $node->preceding(
+            function ($node) {
+                return $node instanceof Element;
+            }
+        );
 
         if (is_null($siblingNode)) {
-            return (object)[
+            return (object) [
                 'node' => $node->parent(),
                 'parentDepth' => $parentDepth + 1,
                 'siblingDepth' => 0,
             ];
         }
 
-        return (object)[
+        return (object) [
             'node' => $siblingNode,
             'parentDepth' => $parentDepth,
             'siblingDepth' => $siblingDepth + 1,
@@ -206,11 +230,12 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
      * so if the image is 3rd found in the dom it's sequence score would be 1 / 3 = .33 * diff in area from the first image
      *
      * @param LocallyStoredImage[] $locallyStoredImages
-     * @param int $depthLevel
+     * @param int                  $depthLevel
      *
      * @return LocallyStoredImage[]
      */
-    private function scoreLocalImages($locallyStoredImages, $depthLevel) {
+    private function scoreLocalImages($locallyStoredImages, $depthLevel)
+    {
         $results = [];
         $i = 1;
         $initialArea = 0;
@@ -240,16 +265,19 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
 
     /**
      * @param LocallyStoredImage $locallyStoredImage
-     * @param int $depthLevel
      *
      * @return bool
      */
-    private function isWorthyImage($locallyStoredImage, $depthLevel) {
+    private function isWorthyImage($locallyStoredImage)
+    {
+        $bytes = $locallyStoredImage->getBytes();
+
         if ($locallyStoredImage->getWidth() <= $this->config()->get('image_min_width')
-          || $locallyStoredImage->getHeight() <= $this->config()->get('image_min_height')
-          || $locallyStoredImage->getFileExtension() == 'NA'
-          || ($depthLevel < 1 && $locallyStoredImage->getWidth() < 300) || $depthLevel >= 1
-          || $this->isBannerDimensions($locallyStoredImage->getWidth(), $locallyStoredImage->getHeight())) {
+            || $locallyStoredImage->getHeight() <= $this->config()->get('image_min_height')
+            || $locallyStoredImage->getFileExtension() == 'NA'
+            || $bytes < $this->config()->get('image_min_bytes') && $bytes != 0
+            || $bytes > $this->config()->get('image_max_bytes')
+            || $this->isBannerDimensions($locallyStoredImage->getWidth(), $locallyStoredImage->getHeight())) {
             return false;
         }
 
@@ -259,28 +287,42 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
     /**
      * @return Image[]
      */
-    private function getAllImages() {
+    private function getAllImages()
+    {
         $results = [];
 
-        $images = $this->article()->getTopNode()->find('img');
+        if (null !== $this->article()->getTopImage()) {
+            $results[] = $this->article()->getTopImage();
+        }
+
+        $images = $this->article()->getDoc()->find('img');
 
         // Generate a complete URL for each image
-        $imageUrls = array_map(function($image) {
-            return $this->buildImagePath($image->attr('src'));
-        }, $images->toArray());
+        $imageUrls = array_map(
+            function ($image) {
+                return $this->buildImagePath($image->attr('src'));
+            },
+            $images->toArray()
+        );
 
         $localImages = $this->getLocallyStoredImages($imageUrls);
 
-        foreach ($localImages as $localImage) {
-            $image = new Image();
-            $image->setImageSrc($localImage->getImgSrc());
-            $image->setBytes($localImage->getBytes());
-            $image->setHeight($localImage->getHeight());
-            $image->setWidth($localImage->getWidth());
-            $image->setImageExtractionType('all');
-            $image->setConfidenceScore(0);
+        $scoredLocalImages = $this->scoreLocalImages($localImages, 0);
 
-            $results[] = $image;
+        ksort($scoredLocalImages);
+
+        foreach ($scoredLocalImages as $localImage) {
+            if ($this->isWorthyImage($localImage)) {
+                $image = new Image();
+                $image->setImageSrc($localImage->getImgSrc());
+                $image->setBytes($localImage->getBytes());
+                $image->setHeight($localImage->getHeight());
+                $image->setWidth($localImage->getWidth());
+                $image->setImageExtractionType('all');
+                $image->setConfidenceScore(0);
+
+                $results[] = $image;
+            }
         }
 
         return $results;
@@ -293,7 +335,8 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
      * @param int $width
      * @param int $height
      */
-    private function isBannerDimensions($width, $height) {
+    private function isBannerDimensions($width, $height)
+    {
         if ($width == $height) {
             return false;
         }
@@ -322,7 +365,8 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
      *
      * @return Element[]
      */
-    private function filterBadNames(NodeList $images) {
+    private function filterBadNames(NodeList $images)
+    {
         $goodImages = [];
 
         foreach ($images as $image) {
@@ -343,14 +387,15 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
      *
      * @return bool
      */
-    private function isOkImageFileName(Element $imageNode) {
+    private function isOkImageFileName(Element $imageNode)
+    {
         $imgSrc = $imageNode->attr('src');
 
         if (empty($imgSrc)) {
             return false;
         }
 
-        $regex = '@' . implode('|', $this->badFileNames) . '@i';
+        $regex = '@'.implode('|', $this->badFileNames).'@i';
 
         if (preg_match($regex, $imgSrc)) {
             return false;
@@ -364,7 +409,8 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
      *
      * @return LocallyStoredImage[]
      */
-    private function getImageCandidates(Element $node) {
+    private function getImageCandidates(Element $node)
+    {
         $images = $node->find('img');
         $filteredImages = $this->filterBadNames($images);
         $goodImages = $this->findImagesThatPassByteSizeTest($filteredImages);
@@ -379,32 +425,40 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
      *
      * @return LocallyStoredImage[]
      */
-    private function findImagesThatPassByteSizeTest($images) {
-        $i = 0; /** @todo Re-factor how the LocallyStoredImage => Image relation works ? Note: PHP 5.6.x adds a 3rd argument to array_filter() to pass the key as well as value. */
+    private function findImagesThatPassByteSizeTest($images)
+    {
+        $i = 0;
+        /** @todo Re-factor how the LocallyStoredImage => Image relation works ? Note: PHP 5.6.x adds a 3rd argument to array_filter() to pass the key as well as value. */
 
         // Limit to the first 30 images
         $images = array_slice($images, 0, 30);
 
         // Generate a complete URL for each image
-        $imageUrls = array_map(function($image) {
-            return $this->buildImagePath($image->attr('src'));
-        }, $images);
+        $imageUrls = array_map(
+            function ($image) {
+                return $this->buildImagePath($image->attr('src'));
+            },
+            $images
+        );
 
         $localImages = $this->getLocallyStoredImages($imageUrls, true);
 
-        $results = array_filter($localImages, function($localImage) use($images, $i) {
-            $image = $images[$i++];
+        $results = array_filter(
+            $localImages,
+            function ($localImage) use ($images, $i) {
+                $image = $images[$i++];
 
-            $bytes = $localImage->getBytes();
+                $bytes = $localImage->getBytes();
 
-            if ($bytes < $this->config()->get('image_min_bytes') && $bytes != 0 || $bytes > $this->config()->get('image_max_bytes')) {
-                $image->remove();
+                if ($bytes < $this->config()->get('image_min_bytes') && $bytes != 0 || $bytes > $this->config()->get('image_max_bytes')) {
+                    $image->remove();
 
-                return false;
+                    return false;
+                }
+
+                return true;
             }
-
-            return true;
-        });
+        );
 
         return $results;
     }
@@ -414,7 +468,8 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
      *
      * @return Image|null
      */
-    private function checkForLinkTag() {
+    private function checkForLinkTag()
+    {
         return $this->checkForTag('link[rel="image_src"]', 'href', 'linktag');
     }
 
@@ -423,7 +478,8 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
      *
      * @return Image|null
      */
-    private function checkForOpenGraphTag() {
+    private function checkForOpenGraphTag()
+    {
         return $this->checkForTag('meta[property="og:image"],meta[name="og:image"]', 'content', 'opengraph');
     }
 
@@ -432,7 +488,8 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
      *
      * @return Image|null
      */
-    private function checkForTwitterTag() {
+    private function checkForTwitterTag()
+    {
         return $this->checkForTag('meta[property="twitter:image"],meta[name="twitter:image"],meta[property="twitter:image:src"],meta[name="twitter:image:src"]', 'content', 'twitter');
     }
 
@@ -443,7 +500,8 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
      *
      * @return Image|null
      */
-    private function checkForTag($selector, $attr, $type) {
+    private function checkForTag($selector, $attr, $type)
+    {
         $meta = $this->article()->getRawDoc()->find($selector);
 
         if (!$meta->count()) {
@@ -482,9 +540,10 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
      *
      * @return Image|null
      */
-    private function ensureMinimumImageSize(Image $mainImage) {
+    private function ensureMinimumImageSize(Image $mainImage)
+    {
         if ($mainImage->getWidth() >= $this->config()->get('image_min_width')
-          && $mainImage->getHeight() >= $this->config()->get('image_min_height')) {
+            && $mainImage->getHeight() >= $this->config()->get('image_min_height')) {
             return $mainImage;
         }
 
@@ -493,11 +552,12 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
 
     /**
      * @param string $imageSrc
-     * @param bool $returnAll
+     * @param bool   $returnAll
      *
      * @return LocallyStoredImage|null
      */
-    private function getLocallyStoredImage($imageSrc, $returnAll = false) {
+    private function getLocallyStoredImage($imageSrc, $returnAll = false)
+    {
         $locallyStoredImages = ImageUtils::storeImagesToLocalFile([$imageSrc], $returnAll, $this->config());
 
         return array_shift($locallyStoredImages);
@@ -505,18 +565,20 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
 
     /**
      * @param string[] $imageSrcs
-     * @param bool $returnAll
+     * @param bool     $returnAll
      *
      * @return LocallyStoredImage[]
      */
-    private function getLocallyStoredImages($imageSrcs, $returnAll = false) {
+    private function getLocallyStoredImages($imageSrcs, $returnAll = false)
+    {
         return ImageUtils::storeImagesToLocalFile($imageSrcs, $returnAll, $this->config());
     }
 
     /**
      * @return string
      */
-    private function getCleanDomain() {
+    private function getCleanDomain()
+    {
         return implode('.', array_slice(explode('.', $this->article()->getDomain()), -2, 2));
     }
 
@@ -528,7 +590,8 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
      *
      * @return Image|null
      */
-    private function checkForKnownElements() {
+    private function checkForKnownElements()
+    {
         if (!$this->article()->getRawDoc()) {
             return null;
         }
@@ -548,10 +611,10 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
         $knownImage = null;
 
         foreach ($knownImgDomNames as $knownName) {
-            $known = $this->article()->getRawDoc()->find('#' . $knownName);
+            $known = $this->article()->getRawDoc()->find('#'.$knownName);
 
             if (!$known->count()) {
-                $known = $this->article()->getRawDoc()->find('.' . $knownName);
+                $known = $this->article()->getRawDoc()->find('.'.$knownName);
             }
 
             if ($known->count()) {
@@ -593,14 +656,15 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
      *
      * @return string
      */
-    private function buildImagePath($imageSrc) {
-        $parts = array(
+    private function buildImagePath($imageSrc)
+    {
+        $parts = [
             'scheme',
             'host',
             'port',
             'path',
             'query',
-        );
+        ];
 
         $imageUrlParts = parse_url($imageSrc);
         $articleUrlParts = parse_url($this->article()->getFinalUrl());
@@ -609,20 +673,23 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
             if (!isset($imageUrlParts[$part]) && isset($articleUrlParts[$part])) {
                 $imageUrlParts[$part] = $articleUrlParts[$part];
 
-            } else if (isset($imageUrlParts[$part]) && !isset($articleUrlParts[$part])) {
-                break;
+            } else {
+                if (isset($imageUrlParts[$part]) && !isset($articleUrlParts[$part])) {
+                    break;
+                }
             }
         }
 
-        return http_build_url($imageUrlParts, array());
+        return http_build_url($imageUrlParts, []);
     }
 
     /**
-     * @param string[]
+     * @param string []
      */
-    private function customSiteMapping() {
+    private function customSiteMapping()
+    {
         if (empty(self::$CUSTOM_SITE_MAPPING)) {
-            $file = __DIR__ . '/../../../resources/images/known-image-css.txt';
+            $file = __DIR__.'/../../../resources/images/known-image-css.txt';
 
             $lines = explode("\n", str_replace(["\r\n", "\r"], "\n", file_get_contents($file)));
 
@@ -635,5 +702,4 @@ class ImageExtractor extends AbstractModule implements ModuleInterface {
 
         return self::$CUSTOM_SITE_MAPPING;
     }
-    
 }
