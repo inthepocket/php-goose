@@ -21,6 +21,7 @@ class Configuration {
         'image_min_height' => 120,
         'image_fetch_best' => true,
         'image_fetch_all' => false,
+        'allowed_mime_types' => null, // All mime types allowed
         /** @see http://guzzle.readthedocs.io/en/stable/request-options.html */
         'browser' => [
             'timeout' => 60,

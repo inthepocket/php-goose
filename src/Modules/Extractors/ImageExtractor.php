@@ -160,16 +160,18 @@ class ImageExtractor extends AbstractModule implements ModuleInterface
 
         if (!empty($scoredLocalImages)) {
             foreach ($scoredLocalImages as $imageScore => $scoredLocalImage) {
-                $mainImage = new Image();
-                $mainImage->setImageSrc($scoredLocalImage->getImgSrc());
-                $mainImage->setImageExtractionType('bigimage');
-                $mainImage->setConfidenceScore(100 / count($scoredLocalImages));
-                $mainImage->setImageScore($imageScore);
-                $mainImage->setBytes($scoredLocalImage->getBytes());
-                $mainImage->setHeight($scoredLocalImage->getHeight());
-                $mainImage->setWidth($scoredLocalImage->getWidth());
+                if ($this->isWorthyImage($scoredLocalImage)) {
+                    $mainImage = new Image();
+                    $mainImage->setImageSrc($scoredLocalImage->getImgSrc());
+                    $mainImage->setImageExtractionType('bigimage');
+                    $mainImage->setConfidenceScore(100 / count($scoredLocalImages));
+                    $mainImage->setImageScore($imageScore);
+                    $mainImage->setBytes($scoredLocalImage->getBytes());
+                    $mainImage->setHeight($scoredLocalImage->getHeight());
+                    $mainImage->setWidth($scoredLocalImage->getWidth());
 
-                return $mainImage;
+                    return $mainImage;
+                }
             }
         } else {
             $depthObj = $this->getDepthLevel($node, $parentDepthLevel, $siblingDepthLevel);
@@ -281,7 +283,27 @@ class ImageExtractor extends AbstractModule implements ModuleInterface
             return false;
         }
 
-        return true;
+        if ($this->checkMimeType($locallyStoredImage)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param LocallyStoredImage $locallyStoredImage
+     * @return LocallyStoredImage
+     */
+    private function checkMimeType(LocallyStoredImage $locallyStoredImage)
+    {
+        $allowedMimeTypes = $this->config()->get('allowed_mime_types');
+        if (is_array($allowedMimeTypes)) {
+            if (!$locallyStoredImage->getMime() || !in_array(strtolower($locallyStoredImage->getMime()), $allowedMimeTypes)) {
+                return null;
+            }
+        }
+
+        return $locallyStoredImage;
     }
 
     /**
@@ -530,9 +552,15 @@ class ImageExtractor extends AbstractModule implements ModuleInterface
             $mainImage->setBytes($locallyStoredImage->getBytes());
             $mainImage->setHeight($locallyStoredImage->getHeight());
             $mainImage->setWidth($locallyStoredImage->getWidth());
+
+            $mainImage = $this->ensureMinimumImageSize($mainImage);
+
+            if ($mainImage && $this->checkMimeType($locallyStoredImage)) {
+                return $mainImage;
+            }
         }
 
-        return $this->ensureMinimumImageSize($mainImage);
+        return null;
     }
 
     /**
@@ -544,6 +572,7 @@ class ImageExtractor extends AbstractModule implements ModuleInterface
     {
         if ($mainImage->getWidth() >= $this->config()->get('image_min_width')
             && $mainImage->getHeight() >= $this->config()->get('image_min_height')) {
+
             return $mainImage;
         }
 
@@ -643,9 +672,15 @@ class ImageExtractor extends AbstractModule implements ModuleInterface
             $mainImage->setBytes($locallyStoredImage->getBytes());
             $mainImage->setHeight($locallyStoredImage->getHeight());
             $mainImage->setWidth($locallyStoredImage->getWidth());
+
+            $mainImage = $this->ensureMinimumImageSize($mainImage);
+
+            if ($mainImage && $this->checkMimeType($locallyStoredImage)) {
+                return $mainImage;
+            }
         }
 
-        return $this->ensureMinimumImageSize($mainImage);
+        return null;
     }
 
     /**

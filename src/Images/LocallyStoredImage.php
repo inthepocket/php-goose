@@ -147,4 +147,18 @@ class LocallyStoredImage {
     public function getWidth() {
         return $this->width;
     }
+
+    /**
+     * @param string $mime
+     */
+    public function setMime($mime) {
+        $this->mime = $mime;
+    }
+
+    /**
+     * @return string
+     */
+    public function getMime() {
+        return $this->mime;
+    }
 }

@@ -58,6 +58,7 @@ class ImageUtils {
                 'bytes' => filesize($localImage->file),
                 'height' => $imageDetails->height,
                 'width' => $imageDetails->width,
+                'mime' => $imageDetails->mime,
                 'fileExtension' => self::getFileExtensionName($imageDetails),
             ]);
         }
